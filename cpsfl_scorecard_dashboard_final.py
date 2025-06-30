@@ -1,78 +1,76 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import io
 
 st.set_page_config(page_title="CPSFL Scorecard Dashboard", layout="wide")
-st.title("📊 CPSFL Scorecard Dashboard")
 
-uploaded_file = st.file_uploader("Upload your Scorecard Excel file", type=["xlsx"])
+# Title and subtitle
+st.markdown("""
+    <h1 style='text-align: center;'>CPSFL Scorecard Dashboard</h1>
+    <h4 style='text-align: center;'>Thriving Residents. Strong Communities.</h4>
+""", unsafe_allow_html=True)
 
-if uploaded_file:
-    try:
-        # Read the uploaded Excel file
-        excel_file = pd.ExcelFile(uploaded_file)
-        sheet_names = excel_file.sheet_names
+# Google Sheet setup
+base_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTVohW51_sRlF_mD7xijTJ8hW47jtIx2-9Ff2mNytnLKWTt926hR_yTtSihI7N2gu9EnEGP3wvjK43v/pub?gid={gid}&single=true&output=csv"
 
-        if 'Data Input' not in sheet_names:
-            st.error("Couldn't find a 'Data Input' sheet in the Excel file.")
-        else:
-            df = excel_file.parse('Data Input')
-            df = df.dropna(subset=['Date',
-                                   'Overall % Completed (MHOs & Discharges)',
-                                   'Required Reports Compliance',
-                                   'Overall Performance Measure',
-                                   'Missing records',
-                                   'Total Possible'])
-            df['Date'] = pd.to_datetime(df['Date'])
+tabs = {
+    "Summary Metrics": 965565385,
+    "Overall Score Breakdown": 209468973,
+    "Reports Compliance Breakdown": 467511660,
+    "Performance Measure Breakdown": 401432916,
+    "Waitlist Overview": 869606256,
+    "Waitlist by Program": 1961299205
+}
 
-            # Format dates to month/day
-            df['DateLabel'] = df['Date'].dt.strftime('%-m/%-d')
+def load_sheet(gid):
+    url = base_url.format(gid=gid)
+    return pd.read_csv(url)
 
-            # Line Chart: Overall Score
-            st.subheader("📈 Overall Score Over Time")
-            fig1, ax1 = plt.subplots()
-            ax1.plot(df['DateLabel'], df['Overall % Completed (MHOs & Discharges)'], marker='o', color='green')
-            ax1.set_xlabel("Date")
-            ax1.set_ylabel("Overall Score")
-            ax1.set_title("Overall Score Trend")
-            ax1.grid(True)
-            plt.setp(ax1.get_xticklabels(), rotation=45, ha='right')
-            st.pyplot(fig1)
+# SECTION 1 – Summary Metrics
+st.header("📊 Summary Metrics")
+try:
+    summary_df = load_sheet(tabs["Summary Metrics"])
+    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Summary Metrics: {e}")
 
-            # Stacked Area Chart: Completed vs Missing
-            st.subheader("📊 Completed vs Missing Records")
-            completed = df['Total Possible'] - df['Missing records']
-            missing = df['Missing records']
-            fig2, ax2 = plt.subplots()
-            ax2.stackplot(df['DateLabel'], completed, missing, labels=['Completed', 'Missing'])
-            ax2.set_title("MHOs/Discharges Over Time")
-            ax2.set_xlabel("Date")
-            ax2.set_ylabel("Record Count")
-            ax2.legend(loc='upper left')
-            ax2.grid(True)
-            plt.setp(ax2.get_xticklabels(), rotation=45, ha='right')
-            st.pyplot(fig2)
+# SECTION 2 – Overall Score Breakdown
+st.header("📈 Overall Score Breakdown")
+try:
+    overall_df = load_sheet(tabs["Overall Score Breakdown"])
+    st.markdown("This score is the overall performance score for completed POMs (MHOs) and Discharges.")
+    st.dataframe(overall_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Overall Score Breakdown: {e}")
 
-            # Combo Chart
-            st.subheader("📉 Scorecard Metrics Over Time")
-            fig3, ax3 = plt.subplots()
-            ax3.plot(df['DateLabel'], df['Overall % Completed (MHOs & Discharges)'], label='Overall Score Trend', marker='o', color='green')
-            ax3.plot(df['DateLabel'], df['Required Reports Compliance'], label='MHO Discharges Over Time', marker='s')
-            ax3.set_ylim(0, 105)
-            ax3.set_title("Key Metrics Comparison")
-            ax3.set_xlabel("Date")
-            ax3.set_ylabel("%")
-            ax3.legend()
-            ax3.grid(True)
-            plt.setp(ax3.get_xticklabels(), rotation=45, ha='right')
-            st.pyplot(fig3)
+# SECTION 3 – Reports Compliance Breakdown
+st.header("📄 Reports Compliance Breakdown")
+try:
+    reports_df = load_sheet(tabs["Reports Compliance Breakdown"])
+    st.markdown("*Compliance is measured by computing the number of items submitted ON TIME divided by TOTAL items.*")
+    st.dataframe(reports_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Reports Compliance Breakdown: {e}")
 
-            # Optional: Data preview
-            with st.expander("🔍 View Raw Data"):
-                st.dataframe(df)
+# SECTION 4 – Performance Measure Breakdown
+st.header("📊 Performance Measure Breakdown")
+try:
+    perf_df = load_sheet(tabs["Performance Measure Breakdown"])
+    st.dataframe(perf_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Performance Measure Breakdown: {e}")
 
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-else:
-    st.info("👆 Upload an Excel file to get started!")
+# SECTION 5 – Waitlist Overview
+st.header("⏳ Waitlist Overview")
+try:
+    waitlist_df = load_sheet(tabs["Waitlist Overview"])
+    st.dataframe(waitlist_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Waitlist Overview: {e}")
+
+# SECTION 6 – Waitlist by Program
+st.header("🏥 Waitlist by Program")
+try:
+    waitlist_prog_df = load_sheet(tabs["Waitlist by Program"])
+    st.dataframe(waitlist_prog_df, use_container_width=True, hide_index=True)
+except Exception as e:
+    st.error(f"Error loading Waitlist by Program: {e}")
